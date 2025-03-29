@@ -1,3 +1,24 @@
+# Database Create Instructions
+
+Using [uv](https://github.com/astral-sh/uv)
+
+```
+uv synch
+```
+
+Will have to manually adjust your file paths in scripts
+
+- 'import_elections.py'
+- 'import_geometries.py'
+
+```
+uv run import_elections.py
+```
+
+```
+uv run import_geometries.py
+```
+
 # PROCESS STEPS
 
 ## Elections
