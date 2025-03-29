@@ -22,12 +22,13 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 CONFIG = {
-    "base_dir": "/home/andrew/projects/cgp_election_data/output/",  # Path to the numbered directories
-    "metadata_path": "/home/andrew/projects/cgp_election_data/output/results-metadata.json",  # Path to metadata JSON file
-    "db_path": "/home/andrew/projects/cgp_election_data/chicago_elections.db",  # Path for the output DuckDB database
+    "base_dir": "output",  # Path to the numbered directories
+    "metadata_path": "output/results-metadata.json",  # Path to metadata JSON file
+    "db_path": "chicago_elections.db",  # Path for the output DuckDB database
     "batch_size": 100000,  # Number of rows to process in a batch
-    "workers": max(1, multiprocessing.cpu_count() - 1)  # Leave one CPU free
+    "workers": max(1, multiprocessing.cpu_count() - 1),  # Leave one CPU free
 }
+
 
 def load_metadata():
     """Load the metadata JSON file and return it as a dictionary."""
