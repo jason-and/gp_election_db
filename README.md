@@ -1,31 +1,34 @@
-# Database Create Instructions
+# Chicago Elections Database
+
+## Database Creation Instructions
+
 Open the `gp_election_db` folder in VSCode or your editor of choice, or alternatively `cd` into the folder in the terminal.
 
 This project uses [uv](https://github.com/astral-sh/uv), so first run:
 
-```
+```bash
 uv sync
 ```
 
 Then, activate the Python virtual environment.
 
-```
+```bash
 source .venv/bin/activate
 ```
 
 From the terminal, run these scripts:
 
-```
+```bash
 uv run scripts/import_elections.py
 ```
 
-```
+```bash
 uv run scripts/import_geometries.py
 ```
 
-# PROCESS STEPS
+## PROCESS STEPS
 
-## Elections
+### Elections
 
 Chicago Board of Elections Website is harder to scrape now and only outputs data in hard to use excel files.
 
@@ -45,18 +48,18 @@ All elections were brought in using scripts/import_elections.py. Table is denorm
 
 Geojson needed to be standardized with precinct_ids, used unscripted jq package to do this. Imported geojson files using scripts/import_geometries.py .
 
-# Duckdb database
+### Duckdb database
 
 file is chicago_elections.db. Still need to work out table creation and relations to allow for geographic analysis. This also may not work right now and may require reworking. When querying data using duckdb cli tool, remember to use
 
-```
+```bash
 INSTALL SPATIAL;
 LOAD SPATIAL;
 ```
 
 To be able to use the geometries correctly.
 
-# Geographies
+### Geographies
 
 - [Boundaries-Ward Precincts 2023](https://data.cityofchicago.org/Facilities-Geographic-Boundaries/Boundaries-Ward-Precincts-2023-/6piy-vbxa/about_data) First used in 2022
 
