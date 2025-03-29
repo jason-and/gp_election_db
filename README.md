@@ -1,22 +1,26 @@
 # Database Create Instructions
+Open the `gp_election_db` folder in VSCode or your editor of choice, or alternatively `cd` into the folder in the terminal.
 
-Using [uv](https://github.com/astral-sh/uv)
+This project uses [uv](https://github.com/astral-sh/uv), so first run:
 
 ```
 uv sync
 ```
 
-Will have to manually adjust your file paths in scripts
-
-- 'import_elections.py'
-- 'import_geometries.py'
+Then, activate the Python virtual environment.
 
 ```
-uv run import_elections.py
+source .venv/bin/activate
+```
+
+From the terminal, run these scripts:
+
+```
+uv run scripts/import_elections.py
 ```
 
 ```
-uv run import_geometries.py
+uv run scripts/import_geometries.py
 ```
 
 # PROCESS STEPS
