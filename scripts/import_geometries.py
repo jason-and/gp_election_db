@@ -222,10 +222,7 @@ def import_precinct_geojson(filepath, valid_from_year, valid_to_year=None):
 
 
 # Main execution
-try:
-    # Recreate table without the constraint if needed
-    print("Checking if we need to recreate the table without the constraint...")
-    constraints = con.execute(
+if __name__ == "__main__":
     con.execute(
         """
     CREATE TABLE IF NOT EXISTS precinct_geometries (
@@ -238,138 +235,150 @@ try:
     """
     )
 
-    if constraints and "UNIQUE" in constraints[0]:
-        print("Found UNIQUE constraint, recreating table without it...")
-
-        # Create a backup table
-        con.execute(
-            "CREATE TABLE IF NOT EXISTS precinct_geometries_backup AS SELECT * FROM precinct_geometries"
-        )
-        print("Created backup of existing data")
-
-        # Drop the original table
-        con.execute("DROP TABLE precinct_geometries")
-        print("Dropped original table")
-
-        # Create a new table without the constraint
-        con.execute(
+    try:
+        # Recreate table without the constraint if needed
+        print("Checking if we need to recreate the table without the constraint...")
+        constraints = con.execute(
             """
-        CREATE TABLE IF NOT EXISTS precinct_geometries (
-            precinct_geometry_id INTEGER PRIMARY KEY,
-            precinct_id VARCHAR,
-            valid_from_year INTEGER,
-            valid_to_year INTEGER,
-            geometry GEOMETRY
-        );
+        SELECT sql FROM sqlite_master
+        WHERE type='table' AND name='precinct_geometries'
         """
-        )
-        print("Created new table without UNIQUE constraint")
+        ).fetchone()
 
-        # Restore data if backup exists
-        backup_count = con.execute(
-            "SELECT COUNT(*) FROM precinct_geometries_backup"
-        ).fetchone()[0]
-        if backup_count > 0:
+        if constraints and "UNIQUE" in constraints[0]:
+            print("Found UNIQUE constraint, recreating table without it...")
+
+            # Create a backup table
+            con.execute(
+                "CREATE TABLE IF NOT EXISTS precinct_geometries_backup AS SELECT * FROM precinct_geometries;"
+            )
+            print("Created backup of existing data")
+
+            # Drop the original table
+            con.execute("DROP TABLE IF EXISTS precinct_geometries;")
+            print("Dropped original table")
+
+            # Create a new table without the constraint
             con.execute(
                 """
-            INSERT INTO precinct_geometries
-            SELECT * FROM precinct_geometries_backup
+            CREATE TABLE IF NOT EXISTS precinct_geometries (
+                precinct_geometry_id INTEGER PRIMARY KEY,
+                precinct_id VARCHAR,
+                valid_from_year INTEGER,
+                valid_to_year INTEGER,
+                geometry GEOMETRY
+            );
             """
             )
-            print(f"Restored {backup_count} records from backup")
-    else:
-        print("Table has no UNIQUE constraint or doesn't exist yet, proceeding...")
+            print("Created new table without UNIQUE constraint")
 
-    # Import each GeoJSON with its valid year range
-    total_imported = 0
+            # Restore data if backup exists
+            backup_count = con.execute(
+                "SELECT COUNT(*) FROM precinct_geometries_backup"
+            ).fetchone()[0]
+            if backup_count > 0:
+                con.execute(
+                    """
+                INSERT INTO precinct_geometries
+                SELECT * FROM precinct_geometries_backup
+                """
+                )
+                print(f"Restored {backup_count} records from backup")
+        else:
+            print("Table has no UNIQUE constraint or doesn't exist yet, proceeding...")
 
-    # Import files one at a time, committing after each one
-    print("\n--- Importing 2010 precincts ---")
-    con.execute("BEGIN TRANSACTION")
-    total_imported += import_precinct_geojson(
-        "precincts/2010_precincts.geojson", 2010, 2013
-    )
-    con.execute("COMMIT")
+        # Import each GeoJSON with its valid year range
+        total_imported = 0
 
-    print("\n--- Importing 2014 precincts ---")
-    con.execute("BEGIN TRANSACTION")
-    total_imported += import_precinct_geojson(
-        "precincts/2014_precincts.geojson",
-        2014,
-        2021,
-    )
-    con.execute("COMMIT")
-
-    print("\n--- Importing 2022 precincts ---")
-    con.execute("BEGIN TRANSACTION")
-    total_imported += import_precinct_geojson(
-        "precincts/2022_precincts.geojson",
-        2022,
-        None,
-    )
-    con.execute("COMMIT")
-
-    print(f"\nTotal of {total_imported} precinct geometries imported into the database")
-
-    # Create index on precinct_id for faster lookups
-    con.execute(
-        "CREATE INDEX IF NOT EXISTS idx_precinct_id ON precinct_geometries(precinct_id)"
-    )
-
-    # Create index on year ranges for faster temporal queries
-    con.execute(
-        """
-    CREATE INDEX IF NOT EXISTS idx_year_range ON precinct_geometries(valid_from_year, valid_to_year)
-    """
-    )
-
-    # Final verification
-    result = con.execute(
-        """
-    SELECT
-        valid_from_year,
-        valid_to_year,
-        COUNT(*) as precinct_count
-    FROM
-        precinct_geometries
-    GROUP BY
-        valid_from_year, valid_to_year
-    ORDER BY
-        valid_from_year
-    """
-    ).fetchall()
-
-    print("\nPrecinct counts by year range:")
-    for from_year, to_year, count in result:
-        to_year_str = str(to_year) if to_year is not None else "present"
-        print(f"Years {from_year}-{to_year_str}: {count} precincts")
-
-    # Final check for any remaining "00000" records
-    zeros = con.execute(
-        """
-    SELECT precinct_id, valid_from_year FROM precinct_geometries
-    WHERE precinct_id = '00000'
-    """
-    ).fetchall()
-
-    if zeros:
-        print(
-            f"\nWARNING: Database contains {len(zeros)} records with precinct_id '00000'!"
+        # Import files one at a time, committing after each one
+        print("\n--- Importing 2010 precincts ---")
+        con.execute("BEGIN TRANSACTION")
+        total_imported += import_precinct_geojson(
+            "precincts/2010_precincts.geojson", 2010, 2013
         )
-        for pid, year in zeros:
-            print(f"  Precinct '00000' exists for year {year}")
-    else:
-        print("\nNo problematic '00000' precinct IDs found in the database.")
+        con.execute("COMMIT")
 
-except Exception as e:
-    # Rollback on error
-    try:
-        con.execute("ROLLBACK")
-    except:
-        pass
-    print(f"Error during import: {str(e)}")
-    print("Changes have been rolled back")
+        print("\n--- Importing 2014 precincts ---")
+        con.execute("BEGIN TRANSACTION")
+        total_imported += import_precinct_geojson(
+            "precincts/2014_precincts.geojson",
+            2014,
+            2021,
+        )
+        con.execute("COMMIT")
 
-finally:
-    # Close connection
-    con.close()
+        print("\n--- Importing 2022 precincts ---")
+        con.execute("BEGIN TRANSACTION")
+        total_imported += import_precinct_geojson(
+            "precincts/2022_precincts.geojson",
+            2022,
+            None,
+        )
+        con.execute("COMMIT")
+
+        print(
+            f"\nTotal of {total_imported} precinct geometries imported into the database"
+        )
+
+        # Create index on precinct_id for faster lookups
+        con.execute(
+            "CREATE INDEX IF NOT EXISTS idx_precinct_id ON precinct_geometries(precinct_id)"
+        )
+
+        # Create index on year ranges for faster temporal queries
+        con.execute(
+            """
+        CREATE INDEX IF NOT EXISTS idx_year_range ON precinct_geometries(valid_from_year, valid_to_year)
+        """
+        )
+
+        # Final verification
+        result = con.execute(
+            """
+        SELECT
+            valid_from_year,
+            valid_to_year,
+            COUNT(*) as precinct_count
+        FROM
+            precinct_geometries
+        GROUP BY
+            valid_from_year, valid_to_year
+        ORDER BY
+            valid_from_year
+        """
+        ).fetchall()
+
+        print("\nPrecinct counts by year range:")
+        for from_year, to_year, count in result:
+            to_year_str = str(to_year) if to_year is not None else "present"
+            print(f"Years {from_year}-{to_year_str}: {count} precincts")
+
+        # Final check for any remaining "00000" records
+        zeros = con.execute(
+            """
+        SELECT precinct_id, valid_from_year FROM precinct_geometries
+        WHERE precinct_id = '00000'
+        """
+        ).fetchall()
+
+        if zeros:
+            print(
+                f"\nWARNING: Database contains {len(zeros)} records with precinct_id '00000'!"
+            )
+            for pid, year in zeros:
+                print(f"  Precinct '00000' exists for year {year}")
+        else:
+            print("\nNo problematic '00000' precinct IDs found in the database.")
+
+    except Exception as e:
+        # Rollback on error
+        try:
+            con.execute("ROLLBACK")
+        except:
+            pass
+        print(f"Error during import: {str(e)}")
+        print("Changes have been rolled back")
+
+    finally:
+        # Close connection
+        con.close()
