@@ -3,7 +3,7 @@
 Using [uv](https://github.com/astral-sh/uv)
 
 ```
-uv synch
+uv sync
 ```
 
 Will have to manually adjust your file paths in scripts
