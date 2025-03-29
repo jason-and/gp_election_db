@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 CONFIG = {
-    "base_dir": "output",  # Path to the numbered directories
+    "base_dir": "output/",  # Path to the numbered directories
     "metadata_path": "output/results-metadata.json",  # Path to metadata JSON file
     "db_path": "chicago_elections.db",  # Path for the output DuckDB database
     "batch_size": 100000,  # Number of rows to process in a batch
