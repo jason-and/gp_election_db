@@ -226,11 +226,17 @@ try:
     # Recreate table without the constraint if needed
     print("Checking if we need to recreate the table without the constraint...")
     constraints = con.execute(
+    con.execute(
         """
-    SELECT sql FROM sqlite_master
-    WHERE type='table' AND name='precinct_geometries'
+    CREATE TABLE IF NOT EXISTS precinct_geometries (
+        precinct_geometry_id INTEGER PRIMARY KEY,
+        precinct_id VARCHAR,
+        valid_from_year INTEGER,
+        valid_to_year INTEGER,
+        geometry GEOMETRY
+    );
     """
-    ).fetchone()
+    )
 
     if constraints and "UNIQUE" in constraints[0]:
         print("Found UNIQUE constraint, recreating table without it...")
